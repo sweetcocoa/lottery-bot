@@ -8,11 +8,13 @@ from datetime import timedelta
 
 import auth
 
+
 class Lotto645Mode(Enum):
     AUTO = 1
     MANUAL = 2
-    BUY = 10 
+    BUY = 10
     CHECK = 20
+
 
 class Lotto645:
     _REQ_HEADERS = {
@@ -34,10 +36,7 @@ class Lotto645:
     }
 
     def buy_lotto645(
-        self, 
-        auth_ctrl: auth.AuthController, 
-        cnt: int, 
-        mode: Lotto645Mode
+        self, auth_ctrl: auth.AuthController, cnt: int, mode: Lotto645Mode
     ) -> dict:
         assert type(auth_ctrl) == auth.AuthController
         assert type(cnt) == int and 1 <= cnt <= 5
@@ -71,7 +70,7 @@ class Lotto645:
             "C",
             "D",
             "E",
-        ]  
+        ]
 
         return {
             "round": self._get_round(),
@@ -83,9 +82,9 @@ class Lotto645:
                     for slot in SLOTS[:cnt]
                 ]
             ),
-            'ROUND_DRAW_DATE' : requirements[1],
-            'WAMT_PAY_TLMT_END_DT' : requirements[2],
-            "gameCnt": cnt
+            "ROUND_DRAW_DATE": requirements[1],
+            "WAMT_PAY_TLMT_END_DT": requirements[2],
+            "gameCnt": cnt,
         }
 
     def _generate_body_for_manual(self, cnt: int) -> dict:
@@ -93,32 +92,28 @@ class Lotto645:
 
         raise NotImplementedError()
 
-    def _getRequirements(self, headers: dict) -> list: 
+    def _getRequirements(self, headers: dict) -> list:
         org_headers = headers
 
-        headers["Referer"] ="https://ol.dhlottery.co.kr/olotto/game/game645.do"
+        headers["Referer"] = "https://ol.dhlottery.co.kr/olotto/game/game645.do"
         headers["Content-Type"] = "application/json; charset=UTF-8"
-        headers["X-Requested-With"] ="XMLHttpRequest"
+        headers["X-Requested-With"] = "XMLHttpRequest"
 
-		#no param needed at now
-        res = requests.post( 
-            url="https://ol.dhlottery.co.kr/olotto/game/egovUserReadySocket.json", 
-            headers=headers
+        # no param needed at now
+        res = requests.post(
+            url="https://ol.dhlottery.co.kr/olotto/game/egovUserReadySocket.json",
+            headers=headers,
         )
-        
-        direct = json.loads(res.text)["ready_ip"]
-        
 
-        res = requests.post( 
-            url="https://ol.dhlottery.co.kr/olotto/game/game645.do", 
-            headers=org_headers
+        direct = json.loads(res.text)["ready_ip"]
+
+        res = requests.post(
+            url="https://ol.dhlottery.co.kr/olotto/game/game645.do", headers=org_headers
         )
         html = res.text
-        soup = BS(
-            html, "html5lib"
-        )
-        draw_date = soup.find("input", id="ROUND_DRAW_DATE").get('value')
-        tlmt_date = soup.find("input", id="WAMT_PAY_TLMT_END_DT").get('value')
+        soup = BS(html, "html5lib")
+        draw_date = soup.find("input", id="ROUND_DRAW_DATE").get("value")
+        tlmt_date = soup.find("input", id="WAMT_PAY_TLMT_END_DT").get("value")
 
         return [direct, draw_date, tlmt_date]
 
@@ -131,26 +126,22 @@ class Lotto645:
         last_drawn_round = int(soup.find("strong", id="lottoDrwNo").text)
         return str(last_drawn_round + 1)
 
-    def get_balance(self, auth_ctrl: auth.AuthController) -> str: 
-
+    def get_balance(self, auth_ctrl: auth.AuthController) -> str:
         headers = self._generate_req_headers(auth_ctrl)
-        res = requests.post( 
-            url="https://dhlottery.co.kr/userSsl.do?method=myPage", 
-            headers=headers
+        res = requests.post(
+            url="https://dhlottery.co.kr/userSsl.do?method=myPage", headers=headers
         )
 
         html = res.text
-        soup = BS(
-            html, "html5lib"
-        )
-        balance = soup.find("p", class_="total_new").find('strong').text
+        soup = BS(html, "html5lib")
+        balance = soup.find("p", class_="total_new").find("strong").text
         return balance
-        
+
     def _try_buying(self, headers: dict, data: dict) -> dict:
         assert type(headers) == dict
         assert type(data) == dict
 
-        headers["Content-Type"]  = "application/x-www-form-urlencoded; charset=UTF-8"
+        headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 
         res = requests.post(
             "https://ol.dhlottery.co.kr/olotto/game/execBuy.do",
@@ -168,51 +159,48 @@ class Lotto645:
         parameters = self._make_search_date()
 
         data = {
-            "nowPage": 1, 
+            "nowPage": 1,
             "searchStartDate": parameters["searchStartDate"],
             "searchEndDate": parameters["searchEndDate"],
-            "winGrade": 1,
-            "lottoId": "LO40", 
-            "sortOrder": "DESC"
+            "winGrade": 2,
+            "lottoId": "LO40",
+            "sortOrder": "DESC",
         }
 
         res = requests.post(
             "https://dhlottery.co.kr/myPage.do?method=lottoBuyList",
             headers=headers,
-            data=data
+            data=data,
         )
 
         html = res.text
         soup = BS(html, "html5lib")
-        
-        winnings = soup.find("table", class_="tbl_data tbl_data_col").find_all("tbody")[0].find_all("td")        
+
+        winnings = (
+            soup.find("table", class_="tbl_data tbl_data_col")
+            .find_all("tbody")[0]
+            .find_all("td")
+        )
+        winnings = [w.text.strip() for w in winnings]
 
         result_data = {
-            "data": "no winning data"
-        }
-        
-        if len(winnings) == 1:
-            return result_data
-            
-
-        result_data = {
-            "round": winnings[2].text.strip(),
-            "money": winnings[6].text.strip(),
-            "purchased_date": winnings[0].text.strip(),
-            "winning_date": winnings[7].text.strip()
+            "purchased_date": winnings[0],
+            "kind": winnings[1],
+            "round": winnings[2],
+            "count": winnings[4],
+            "status": winnings[5],
+            "money": winnings[6],
+            "winning_date": winnings[7],
         }
 
         return result_data
-    
+
     def _make_search_date(self) -> dict:
         today = datetime.datetime.today()
         today_str = today.strftime("%Y%m%d")
         weekago = today - timedelta(days=7)
         weekago_str = weekago.strftime("%Y%m%d")
-        return {
-            "searchStartDate": weekago_str,
-            "searchEndDate": today_str
-        }
+        return {"searchStartDate": weekago_str, "searchEndDate": today_str}
 
     def _show_result(self, body: dict) -> None:
         assert type(body) == dict
@@ -221,5 +209,5 @@ class Lotto645:
             return
 
         result = body.get("result", {})
-        if result.get("resultMsg", "FAILURE").upper() != "SUCCESS":    
+        if result.get("resultMsg", "FAILURE").upper() != "SUCCESS":
             return
