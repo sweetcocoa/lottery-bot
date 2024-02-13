@@ -165,9 +165,6 @@ class Win720:
         )
         headers = self._generate_req_headers(auth_ctrl)
         data = {"q": requests.utils.quote(self._encText(payload))}
-        import pdb
-
-        pdb.set_trace()
         res = requests.post(
             url="https://el.dhlottery.co.kr/game/pension720/process/connPro.jsp",
             headers=headers,
