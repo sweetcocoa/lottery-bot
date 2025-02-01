@@ -1,12 +1,13 @@
-import json
 import datetime
-import requests
-
-from enum import Enum
-from bs4 import BeautifulSoup as BS
+import json
 from datetime import timedelta
+from enum import Enum
+
+import requests
+from bs4 import BeautifulSoup as BS
 
 import auth
+from HttpClient import HttpClientSingleton
 
 
 class Lotto645Mode(Enum):
@@ -34,6 +35,9 @@ class Lotto645:
         "Sec-Fetch-Dest": "document",
         "Accept-Language": "ko,en-US;q=0.9,en;q=0.8,ko-KR;q=0.7",
     }
+
+    def __init__(self):
+        self.http_client = HttpClientSingleton.get_instance()
 
     def buy_lotto645(
         self, auth_ctrl: auth.AuthController, cnt: int, mode: Lotto645Mode
@@ -100,14 +104,14 @@ class Lotto645:
         headers["X-Requested-With"] = "XMLHttpRequest"
 
         # no param needed at now
-        res = requests.post(
+        res = self.http_client.post(
             url="https://ol.dhlottery.co.kr/olotto/game/egovUserReadySocket.json",
             headers=headers,
         )
 
         direct = json.loads(res.text)["ready_ip"]
 
-        res = requests.post(
+        res = self.http_client.post(
             url="https://ol.dhlottery.co.kr/olotto/game/game645.do", headers=org_headers
         )
         html = res.text
@@ -118,7 +122,7 @@ class Lotto645:
         return [direct, draw_date, tlmt_date]
 
     def _get_round(self) -> str:
-        res = requests.get("https://www.dhlottery.co.kr/common.do?method=main")
+        res = self.http_client.get("https://www.dhlottery.co.kr/common.do?method=main")
         html = res.text
         soup = BS(
             html, "html5lib"
@@ -128,7 +132,7 @@ class Lotto645:
 
     def get_balance(self, auth_ctrl: auth.AuthController) -> str:
         headers = self._generate_req_headers(auth_ctrl)
-        res = requests.post(
+        res = self.http_client.post(
             url="https://dhlottery.co.kr/userSsl.do?method=myPage", headers=headers
         )
 
@@ -143,7 +147,7 @@ class Lotto645:
 
         headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 
-        res = requests.post(
+        res = self.http_client.post(
             "https://ol.dhlottery.co.kr/olotto/game/execBuy.do",
             headers=headers,
             data=data,
@@ -167,7 +171,7 @@ class Lotto645:
             "sortOrder": "DESC",
         }
 
-        res = requests.post(
+        res = self.http_client.post(
             "https://dhlottery.co.kr/myPage.do?method=lottoBuyList",
             headers=headers,
             data=data,

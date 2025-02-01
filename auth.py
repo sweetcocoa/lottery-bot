@@ -1,5 +1,8 @@
 import copy
+
 import requests
+
+from HttpClient import HttpClientSingleton
 
 
 class AuthController:
@@ -23,6 +26,9 @@ class AuthController:
 
     _AUTH_CRED = ""
 
+    def __init__(self):
+        self.http_client = HttpClientSingleton.get_instance()
+
     def login(self, user_id: str, password: str):
         assert type(user_id) == str
         assert type(password) == str
@@ -35,7 +41,9 @@ class AuthController:
 
         data = self._generate_body(user_id, password)
 
-        _res = self._try_login(headers, data)  # 새로운 값의 JSESSIONID가 내려오는데, 이 값으론 로그인 안됨
+        _res = self._try_login(
+            headers, data
+        )  # 새로운 값의 JSESSIONID가 내려오는데, 이 값으론 로그인 안됨
 
         self._update_auth_cred(default_auth_cred)
 
@@ -47,7 +55,7 @@ class AuthController:
         return copied_headers
 
     def _get_default_auth_cred(self):
-        res = requests.get(
+        res = self.http_client.get(
             "https://dhlottery.co.kr/gameResult.do?method=byWin&wiselog=H_C_1_1"
         )
 
@@ -85,7 +93,7 @@ class AuthController:
         assert type(headers) == dict
         assert type(data) == dict
 
-        res = requests.post(
+        res = self.http_client.post(
             "https://www.dhlottery.co.kr/userSsl.do?method=login",
             headers=headers,
             data=data,

@@ -1,16 +1,17 @@
-import json
-import datetime
-import requests
 import base64
-
-from bs4 import BeautifulSoup as BS
+import datetime
+import json
 from datetime import timedelta
+
+import requests
+from bs4 import BeautifulSoup as BS
 from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Hash import SHA256
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 
 import auth
+from HttpClient import HttpClientSingleton
 
 
 class Win720:
@@ -42,6 +43,9 @@ class Win720:
         "Accept-Language": "ko,ko-KR;q=0.9,en-US;q=0.8,en;q=0.7",
         "X-Requested-With": "XMLHttpRequest",
     }
+
+    def __init__(self):
+        self.http_client = HttpClientSingleton.get_instance()
 
     def buy_Win720(
         self,
@@ -89,7 +93,7 @@ class Win720:
         return auth_ctrl.add_auth_cred_to_headers(self._REQ_HEADERS)
 
     def _get_round(self) -> str:
-        res = requests.get("https://www.dhlottery.co.kr/common.do?method=main")
+        res = self.http_client.get("https://www.dhlottery.co.kr/common.do?method=main")
         html = res.text
         soup = BS(
             html, "html5lib"
@@ -108,7 +112,7 @@ class Win720:
 
         data = {"q": requests.utils.quote(self._encText(payload))}
 
-        res = requests.post(
+        res = self.http_client.post(
             url="https://el.dhlottery.co.kr/game/pension720/process/makeAutoNo.jsp",
             headers=headers,
             data=data,
@@ -133,7 +137,7 @@ class Win720:
 
         data = {"q": requests.utils.quote(self._encText(payload))}
 
-        res = requests.post(
+        res = self.http_client.post(
             url="https://el.dhlottery.co.kr/game/pension720/process/makeOrderNo.jsp",
             headers=headers,
             data=data,
@@ -156,16 +160,16 @@ class Win720:
     ) -> str:
         payload = (
             f"ROUND={win720_round}&FLAG=&BUY_KIND=01&BUY_NO={jo}{extracted_num}"
-            f"&BUY_CNT={count}&BUY_SET_TYPE=A&ACCS_TYPE={('01%2C'*count)[:-3]}&BUY_TYPE={('A%2C'*count)[:-3]}&CS_TYPE=01"
+            f"&BUY_CNT={count}&BUY_SET_TYPE=A&ACCS_TYPE={('01%2C' * count)[:-3]}&BUY_TYPE={('A%2C' * count)[:-3]}&CS_TYPE=01"
             f"&orderNo={orderNo}&orderDate={orderDate}&TRANSACTION_ID=&WIN_DATE=&USER_ID={username}"
             "&PAY_TYPE=&resultErrorCode=&resultErrorMsg=&resultOrderNo=&WORKING_FLAG=true"
             f"&NUM_CHANGE_TYPE=&auto_process=N&set_type=A&classnum={jo}&selnum={extracted_num}"
-            f"&buytype=M&num1=&num2=&num3=&num4=&num5=&num6=&DSEC=34&CLOSE_DATE=&verifyYN=N&curdeposit=&curpay={1000*count}"
+            f"&buytype=M&num1=&num2=&num3=&num4=&num5=&num6=&DSEC=34&CLOSE_DATE=&verifyYN=N&curdeposit=&curpay={1000 * count}"
             f"&DROUND={win720_round}&DSEC=0&CLOSE_DATE=&verifyYN=N&lotto720_radio_group=on"
         )
         headers = self._generate_req_headers(auth_ctrl)
         data = {"q": requests.utils.quote(self._encText(payload))}
-        res = requests.post(
+        res = self.http_client.post(
             url="https://el.dhlottery.co.kr/game/pension720/process/connPro.jsp",
             headers=headers,
             data=data,
@@ -215,7 +219,7 @@ class Win720:
 
     def get_balance(self, auth_ctrl: auth.AuthController) -> str:
         headers = self._generate_req_headers(auth_ctrl)
-        res = requests.post(
+        res = self.http_client.post(
             url="https://dhlottery.co.kr/userSsl.do?method=myPage", headers=headers
         )
 
@@ -240,7 +244,7 @@ class Win720:
             "sortOrder": "DESC",
         }
 
-        res = requests.post(
+        res = self.http_client.post(
             "https://dhlottery.co.kr/myPage.do?method=lottoBuyList",
             headers=headers,
             data=data,
