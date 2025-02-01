@@ -93,10 +93,10 @@ def buy():
     globalAuthCtrl = auth.AuthController()
     globalAuthCtrl.login(username, password)
 
-    # response = buy_lotto645(globalAuthCtrl, count, mode)
-    # send_message(
-    #     1, 0, response=response, token=telegram_token, chat_ids=[telegram_chat_id]
-    # )
+    response = buy_lotto645(globalAuthCtrl, count, mode)
+    send_message(
+        1, 0, response=response, token=telegram_token, chat_ids=[telegram_chat_id]
+    )
     time.sleep(5)
 
     response = buy_win720(globalAuthCtrl, username=username, jo=jo, count=count)
