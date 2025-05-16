@@ -226,7 +226,6 @@ class Win720:
         html = res.text
         soup = BS(html, "html5lib")
         balance = soup.find("p", class_="total_new").find("strong").text
-        print(balance, type(balance))
         return balance
 
     def check_winning(self, auth_ctrl: auth.AuthController) -> dict:
