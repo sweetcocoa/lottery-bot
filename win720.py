@@ -283,8 +283,6 @@ class Win720:
     def _show_result(self, body: dict) -> None:
         assert type(body) == dict
 
-        print(f"{json.dumps(body)}")
-
         if body.get("loginYn") != "Y":
             return
 
